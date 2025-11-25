@@ -1,1 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WePlay Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #6e8efb, #a777e3);
+      color: white;
+    }
+    .login-container {
+      text-align: center;
+      background: rgba(0,0,0,0.5);
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+      width: 90%;
+      max-width: 400px;
+    }
+    button {
+      padding: 12px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #f7df1e;
+      color: black;
+      font-weight: bold;
+      margin-top: 20px;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #ffd700;
+    }
+    h1 { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1>WePlay Login</h1>
+    <p>Login with Google to continue</p>
+    <button id="googleLogin">Login with Google</button>
+    <p id="status"></p>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_NEW_API_KEY",
+      authDomain: "weplay40gg.firebaseapp.com",
+      projectId: "weplay40gg",
+      storageBucket: "weplay40gg.firebasestorage.app",
+      messagingSenderId: "1060464142208",
+      appId: "1:1060464142208:web:99ca502ddafb07dd4b8365"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const loginBtn = document.getElementById("googleLogin");
+    const status = document.getElementById("status");
+
+    loginBtn.onclick = () => {
+      signInWithPopup(auth, provider)
+        .then((result) => {
+          status.textContent = `Logged in as ${result.user.displayName}`;
+          setTimeout(() => {
+            window.location.href = "flappy.html"; // go to Flappy Bird
+          }, 1000);
+        })
+        .catch((err) => {
+          status.textContent = "Login failed: " + err.message;
+        });
+    };
+
+    // Auto redirect if already logged in
+    onAuthStateChanged(auth, (user) => {
+      if(user) {
+        window.location.href = "flappy.html";
+      }
+    });
+  </script>
+</body>
+</html>
+
 
