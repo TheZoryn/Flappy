@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flappy Bird Challenge</title>
+  <style>
+    body { text-align: center; font-family: Arial; }
+    canvas { border: 1px solid black; display: block; margin: 20px auto; background: #70c5ce; }
+    #mathGate { display: none; margin-top: 20px; }
+    input { padding: 5px; margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Flappy Bird Challenge</h1>
+  <canvas id="gameCanvas" width="400" height="500"></canvas>
+
+  <div id="mathGate">
+    <h2>Math Gate: Solve to continue</h2>
+    <p>Enter the secret code:</p>
+    <input type="text" id="mathInput" placeholder="Enter code">
+    <button id="submitMath">Submit</button>
+    <p id="mathMsg" style="color:red;"></p>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Bird variables
+    let bird = { x: 50, y: 250, width: 25, height: 25, gravity: 1, lift: -15, velocity: 0 };
+    let pipes = [];
+    let frame = 0;
+    let score = 0;
+    let gameOver = false;
+
+    // Pipe settings
+    const pipeWidth = 50;
+    const pipeGap = 200; // Bigger gap for easier passing
+
+    function createPipe() {
+      let top = Math.random() * 150 + 50;
+      let bottom = canvas.height - top - pipeGap;
+      pipes.push({ x: canvas.width, top: top, bottom: bottom, width: pipeWidth, scored: false });
+    }
+
+    function draw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+
+      // Draw bird
+      ctx.fillStyle = "yellow";
+      ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+
+      // Draw pipes
+      ctx.fillStyle = "green";
+      pipes.forEach(pipe => {
+        ctx.fillRect(pipe.x, 0, pipe.width, pipe.top);
+        ctx.fillRect(pipe.x, canvas.height - pipe.bottom, pipe.width, pipe.bottom);
+        pipe.x -= 1.5; // slower pipe speed
+
+        // Collision
+        if(bird.x < pipe.x + pipe.width && bird.x + bird.width > pipe.x &&
+          (bird.y < pipe.top || bird.y + bird.height > canvas.height - pipe.bottom)) {
+            gameOver = true;
+        }
+
+        // Passed pipe
+        if(!pipe.scored && pipe.x + pipe.width < bird.x) {
+          score++;
+          pipe.scored = true;
+        }
+      });
+
+      // Bird physics
+      bird.velocity += bird.gravity;
+      bird.y += bird.velocity;
+      if(bird.y + bird.height > canvas.height || bird.y < 0) gameOver = true;
+
+      // Score
+      ctx.fillStyle = "black";
+      ctx.font = "20px Arial";
+      ctx.fillText("Score: " + score, 10, 30);
+
+      // New pipes
+      if(frame % 120 === 0) createPipe(); // spacing between pipes
+      frame++;
+
+      if(!gameOver) requestAnimationFrame(draw);
+      else checkMathGate();
+    }
+
+    function flap() {
+      bird.velocity = bird.lift;
+    }
+    document.addEventListener("keydown", (e) => {
+      if(e.code === "Space") flap();
+    });
+    document.addEventListener("click", flap);
+
+    draw();
+
+    // Math gate
+    function checkMathGate() {
+      if(score >= 2){
+        canvas.style.display = "none";
+        document.getElementById("mathGate").style.display = "block";
+
+        const submitBtn = document.getElementById("submitMath");
+        submitBtn.onclick = () => {
+          const val = document.getElementById("mathInput").value;
+          const msg = document.getElementById("mathMsg");
+          if(val == "7887"){  // secret code
+            window.location.href = "group.html"; // redirect to real app
+          } else {
+            msg.textContent = "Wrong code! Restarting game...";
+            setTimeout(() => location.reload(), 1500);
+          }
+        }
+      } else {
+        alert("Score less than 2! Restarting game...");
+        location.reload();
+      }
+    }
+  </script>
+</body>
+</html>

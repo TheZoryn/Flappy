@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WePlay Group Chat</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
+    h1 { text-align: center; background: #4CAF50; color: white; padding: 10px 0; margin: 0; }
+    #chatContainer { flex: 1; overflow-y: auto; padding: 10px; background: #f0f0f0; }
+    .message { margin-bottom: 10px; }
+    .nickname { font-weight: bold; margin-right: 5px; }
+    #inputContainer { display: flex; padding: 10px; background: #ddd; }
+    #messageInput { flex: 1; padding: 10px; font-size: 16px; }
+    #sendBtn { padding: 10px 20px; font-size: 16px; margin-left: 10px; }
+  </style>
+</head>
+<body>
+
+  <h1>WePlay Group Chat</h1>
+
+  <div id="chatContainer"></div>
+
+  <div id="inputContainer">
+    <input type="text" id="messageInput" placeholder="Type your message..." />
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
+    // Firebase config — replace with your keys
+    const firebaseConfig = {
+      apiKey: "AIzaSyAWQx78lEiIvDBJOdHdFZHTzGrGsFKOAgU",
+      authDomain: "weplay40gg.firebaseapp.com",
+      projectId: "weplay40gg",
+      storageBucket: "weplay40gg.appspot.com",
+      messagingSenderId: "1060464142208",
+      appId: "1:1060464142208:web:99ca502ddafb07dd4b8365"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth();
+
+    const chatContainer = document.getElementById("chatContainer");
+    const messageInput = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendBtn");
+
+    let userNickname = "";
+
+    // Check login
+    onAuthStateChanged(auth, user => {
+      if(user){
+        userNickname = user.displayName || user.email.split("@")[0];
+        startChatListener();
+      } else {
+        alert("You must log in first!");
+        window.location.href = "index.html";
+      }
+    });
+
+    // Send message
+    sendBtn.addEventListener("click", async () => {
+      const text = messageInput.value.trim();
+      if(text === "") return;
+      try {
+        await addDoc(collection(db, "groupMessages"), {
+          nickname: userNickname,
+          text: text,
+          timestamp: serverTimestamp()
+        });
+        messageInput.value = "";
+      } catch(err) {
+        console.error("Error sending message:", err);
+      }
+    });
+
+    // Real-time chat listener
+    function startChatListener() {
+      const q = query(collection(db, "groupMessages"), orderBy("timestamp"));
+      onSnapshot(q, snapshot => {
+        chatContainer.innerHTML = "";
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const msgDiv = document.createElement("div");
+          msgDiv.classList.add("message");
+          msgDiv.innerHTML = `<span class="nickname">${data.nickname}:</span> ${data.text}`;
+          chatContainer.appendChild(msgDiv);
+        });
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      });
+    }
+  </script>
+</body>
+</html>

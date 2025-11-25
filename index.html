@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Page</title>
+  <style>
+    body { font-family: Arial; text-align: center; margin-top: 80px; }
+    input { display: block; margin: 10px auto; padding: 10px; width: 220px; }
+    button { padding: 10px 20px; margin-top: 10px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <h1>Login / Register</h1>
+  <input type="text" id="nickname" placeholder="Nickname">
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <button id="loginBtn">Login / Register</button>
+  <hr style="width: 200px;">
+  <button id="googleBtn">Sign in with Google</button>
+
+  <!-- Firebase v12 Modular SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+    // 🔹 Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAWQx78lEiIvDBJOdHdFZHTzGrGsFKOAgU",
+      authDomain: "weplay40gg.firebaseapp.com",
+      projectId: "weplay40gg",
+      storageBucket: "weplay40gg.firebasestorage.app",
+      messagingSenderId: "1060464142208",
+      appId: "1:1060464142208:web:99ca502ddafb07dd4b8365"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Login / Register with Email
+    const loginBtn = document.getElementById('loginBtn');
+    loginBtn.addEventListener('click', async () => {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const nickname = document.getElementById('nickname').value;
+
+      if(!email || !password || !nickname){
+        alert("Please fill all fields");
+        return;
+      }
+
+      try {
+        // Try login
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const uid = userCredential.user.uid;
+        await setDoc(doc(db, 'users', uid), { nickname, uid });
+        window.location.href = 'flappy.html';
+      } catch (error) {
+        if(error.code === 'auth/user-not-found'){
+          // Create account
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const uid = userCredential.user.uid;
+          await setDoc(doc(db, 'users', uid), { nickname, uid });
+          window.location.href = 'flappy.html';
+        } else {
+          alert(error.message);
+        }
+      }
+    });
+
+    // Google Login
+    const googleBtn = document.getElementById('googleBtn');
+    const provider = new GoogleAuthProvider();
+    googleBtn.addEventListener('click', async () => {
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        const uid = user.uid;
+        const nickname = user.displayName || "Anonymous";
+        await setDoc(doc(db, 'users', uid), { nickname, uid });
+        window.location.href = 'flappy.html';
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  </script>
+
+</body>
+</html>
