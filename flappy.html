@@ -15,148 +15,162 @@
       height: 100vh;
     }
     canvas {
-      border: 3px solid #fff;
-      border-radius: 15px;
+      border: 2px solid #fff;
+      border-radius: 10px;
       display: block;
       background: #70c5ce;
     }
-    #instructions {
+    #info {
       position: absolute;
-      top: 20px;
+      top: 10px;
+      font-size: 18px;
+      color: white;
       text-align: center;
       width: 100%;
-      color: white;
-      font-size: 18px;
-      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <div id="instructions">Press Space or Tap to Start</div>
+  <div id="info">Press Space (PC) or Tap (Mobile) to Start</div>
   <canvas id="gameCanvas" width="400" height="600"></canvas>
 
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-    // Game variables
-    let bird = { x: 80, y: 300, width: 30, height: 30, dy: 0 };
-    const gravity = 0.4;
-    const jump = -7;
-    const pipeWidth = 60;
-    const pipeGap = 200; // Wider gap
-    let pipes = [];
-    let score = 0;
+    const info = document.getElementById("info");
     let gameStarted = false;
     let gameOver = false;
+    let score = 0;
+    const secretCode = "7887"; // Developer secret code
+    let bird, pipes, gravity, lift, pipeWidth, pipeGap;
 
-    // Secret code
-    const secretCode = "7887";
-
-    function resetGame() {
-      bird.y = 300;
-      bird.dy = 0;
+    function initGame() {
+      bird = { x: 80, y: 300, width: 30, height: 30, velocity: 0 };
+      gravity = 0.4;  // slower for beginner
+      lift = -7;
       pipes = [];
+      pipeWidth = 60;
+      pipeGap = 200;  // bigger gap
       score = 0;
       gameOver = false;
-      gameStarted = false;
-      document.getElementById('instructions').textContent = "Press Space or Tap to Start";
-      requestAnimationFrame(draw);
+      info.textContent = "Press Space (PC) or Tap (Mobile) to Start";
     }
 
-    // Create pipes periodically
-    function createPipe() {
+    function spawnPipe() {
       const topHeight = Math.random() * (canvas.height - pipeGap - 100) + 50;
-      pipes.push({ x: canvas.width, top: topHeight, bottom: topHeight + pipeGap });
+      pipes.push({ x: canvas.width, top: topHeight, bottom: topHeight + pipeGap, passed: false });
     }
 
-    // Handle input
-    function jumpBird() {
-      if(!gameStarted) {
-        gameStarted = true;
-        document.getElementById('instructions').textContent = "";
-      }
-      if(!gameOver) bird.dy = jump;
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if(e.code === 'Space') jumpBird();
-    });
-
-    document.addEventListener('touchstart', jumpBird);
-
-    // Draw game
-    function draw() {
-      ctx.clearRect(0,0,canvas.width, canvas.height);
-
-      // Draw bird
-      bird.dy += gravity;
-      bird.y += bird.dy;
-      ctx.fillStyle = 'yellow';
+    function drawBird() {
+      ctx.fillStyle = "#FF0";
       ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
-
-      // Move and draw pipes
-      for(let i = 0; i < pipes.length; i++) {
-        pipes[i].x -= 2; // Slow speed
-        ctx.fillStyle = 'green';
-        ctx.fillRect(pipes[i].x, 0, pipeWidth, pipes[i].top);
-        ctx.fillRect(pipes[i].x, pipes[i].bottom, pipeWidth, canvas.height - pipes[i].bottom);
-
-        // Check collision
-        if(bird.x + bird.width > pipes[i].x && bird.x < pipes[i].x + pipeWidth) {
-          if(bird.y < pipes[i].top || bird.y + bird.height > pipes[i].bottom) {
-            triggerDeath();
-            return;
-          }
-        }
-
-        // Score
-        if(!pipes[i].scored && pipes[i].x + pipeWidth < bird.x) {
-          score++;
-          pipes[i].scored = true;
-        }
-      }
-
-      // Remove off-screen pipes
-      pipes = pipes.filter(p => p.x + pipeWidth > 0);
-
-      // Generate new pipe
-      if(gameStarted && pipes.length === 0 || (pipes[pipes.length-1].x < canvas.width - 200)) {
-        createPipe();
-      }
-
-      // Draw score
-      ctx.fillStyle = "white";
-      ctx.font = "24px Arial";
-      ctx.fillText("Score: " + score, 10, 30);
-
-      // Check floor and ceiling
-      if(bird.y + bird.height > canvas.height || bird.y < 0) {
-        triggerDeath();
-        return;
-      }
-
-      if(!gameOver) requestAnimationFrame(draw);
     }
 
-    function triggerDeath() {
-      gameOver = true;
+    function drawPipes() {
+      ctx.fillStyle = "#0F0";
+      pipes.forEach(pipe => {
+        ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+        ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, canvas.height - pipe.bottom);
+      });
+    }
 
-      if(score === 2) {
-        const userCode = prompt("Enter the developer secret code:");
-        if(userCode === secretCode) {
-          window.location.href = "group.html"; // Go to real app
+    function drawScore() {
+      ctx.fillStyle = "#fff";
+      ctx.font = "20px Arial";
+      ctx.fillText("Score: " + score, 10, 25);
+    }
+
+    function update() {
+      if (!gameStarted) return;
+
+      bird.velocity += gravity;
+      bird.y += bird.velocity;
+
+      if (bird.y + bird.height > canvas.height || bird.y < 0) {
+        endGame();
+      }
+
+      pipes.forEach(pipe => {
+        pipe.x -= 2;  // slower speed
+
+        // collision
+        if (
+          bird.x + bird.width > pipe.x &&
+          bird.x < pipe.x + pipeWidth &&
+          (bird.y < pipe.top || bird.y + bird.height > pipe.bottom)
+        ) {
+          endGame();
+        }
+
+        // scoring
+        if (!pipe.passed && pipe.x + pipeWidth < bird.x) {
+          pipe.passed = true;
+          score++;
+        }
+      });
+
+      // remove offscreen pipes
+      pipes = pipes.filter(pipe => pipe.x + pipeWidth > 0);
+    }
+
+    function endGame() {
+      gameStarted = false;
+      gameOver = true;
+      info.textContent = "Game Over!";
+
+      if (score === 2) {
+        const code = prompt("Enter the developer secret code:");
+        if (code === secretCode) {
+          window.location.href = "group.html"; // go to group chat
         } else {
           alert("Wrong code! Restarting game.");
-          resetGame();
+          initGame();
         }
       } else {
-        alert("You died! Restarting game.");
-        resetGame();
+        alert("Score must be exactly 2 to proceed! Restarting game.");
+        initGame();
       }
     }
 
-    draw(); // Initial draw
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBird();
+      drawPipes();
+      drawScore();
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      if (!gameOver) requestAnimationFrame(gameLoop);
+    }
+
+    function startGame() {
+      if (!gameStarted) {
+        gameStarted = true;
+        gameOver = false;
+        info.textContent = "";
+        spawnPipe();
+        setInterval(spawnPipe, 2500); // spawn pipe every 2.5s
+        gameLoop();
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        if (!gameStarted) startGame();
+        bird.velocity = lift;
+      }
+    });
+
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      if (!gameStarted) startGame();
+      bird.velocity = lift;
+    });
+
+    initGame();
   </script>
 </body>
 </html>
